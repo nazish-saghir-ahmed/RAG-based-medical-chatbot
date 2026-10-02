@@ -53,16 +53,22 @@ User Query / Document Upload
 
 ```
 PROJECT_RAG/
+├── api/
+│   └── index.py                        # Vercel Serverless ASGI / FastAPI entrypoint & RAG engine
+├── public/
+│   └── index.html                      # Interactive Clinical CareBot Web UI
+├── vercel.json                         # Vercel deployment & route routing configuration
+├── app.py                              # Local & Universal ASGI entrypoint
 ├── data/                               # Reference medical source documents
 │   └── The_GALE_ENCYCLOPEDIA_of_MEDICINE_SECOND.pdf
-├── streamlit_app.py                    # Main CareBot Streamlit application
+├── streamlit_app.py                    # Streamlit desktop/local application
 ├── streamlit_app_explain.py            # Annotated version with step-by-step documentation
 ├── connectmemorywithllm.py             # Backend RAG retrieval chain & CLI tester
 ├── Creatememoryforllm.py               # Vectorstore index generation script (FAISS)
 ├── carebot.py                          # Groq-based prototype implementation
 ├── CHATBOT_FEATURES.md                 # Detailed feature specifications
 ├── concepts.md                         # Comprehensive RAG concepts & architectural guide
-├── requirements.txt                    # Project dependencies
+├── requirements.txt                    # Production serverless dependencies
 ├── .env.example                        # Environment variables template
 └── .gitignore                          # Git ignore rules for virtualenvs, caches & keys
 ```

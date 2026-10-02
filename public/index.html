@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CareBot 🩺 — Medical RAG Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --canvas: #0B1220;
+            --surface: #121B2E;
+            --surface-hi: #182338;
+            --line: #263248;
+            --ink: #EAF0F8;
+            --ink-dim: #AAB8CC;
+            --ink-mute: #7C8AA0;
+            --teal: #35D6C0;
+            --teal-dim: #1B4A44;
+            --amber: #F0B429;
+            --amber-dim: #4A3A15;
+            --danger: #FF6B6B;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background-color: var(--canvas);
+            color: var(--ink);
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Sidebar */
+        aside {
+            width: 320px;
+            background-color: #0E1526;
+            border-right: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+            gap: 20px;
+            overflow-y: auto;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--line);
+        }
+        .brand-icon {
+            font-size: 2rem;
+            background: var(--surface);
+            padding: 8px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+        }
+        .brand-title {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.3rem;
+            color: var(--ink);
+            font-weight: 600;
+        }
+        .brand-sub {
+            font-size: 0.78rem;
+            color: var(--teal);
+            font-weight: 500;
+        }
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--ink-mute);
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            padding: 14px;
+        }
+        .mode-select {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.86rem;
+            cursor: pointer;
+            color: var(--ink-dim);
+            padding: 8px 10px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .mode-option:hover { background: var(--surface-hi); color: var(--ink); }
+        .mode-option input[type="radio"] { accent-color: var(--teal); }
+        
+        .upload-dropzone {
+            border: 1.5px dashed var(--line);
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            background: var(--surface);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .upload-dropzone:hover { border-color: var(--teal); background: var(--surface-hi); }
+        .upload-dropzone p { font-size: 0.82rem; color: var(--ink-dim); margin-top: 6px; }
+        
+        .btn {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            color: var(--ink);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: 0.2s;
+            width: 100%;
+        }
+        .btn:hover { background: var(--surface-hi); border-color: var(--teal); color: var(--teal); }
+        .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+        
+        /* Main Chat Area */
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+        header {
+            padding: 16px 28px;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(11, 18, 32, 0.85);
+            backdrop-filter: blur(8px);
+        }
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: var(--teal);
+            background: var(--teal-dim);
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(53, 214, 192, 0.3);
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--teal);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 28px 120px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .message-row {
+            display: flex;
+            gap: 14px;
+            max-width: 860px;
+            width: 100%;
+        }
+        .message-row.user-row { align-self: flex-end; flex-direction: row-reverse; }
+        .message-row.bot-row { align-self: flex-start; }
+        
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .user-avatar { background: var(--amber-dim); border: 1px solid var(--amber); }
+        .bot-avatar { background: var(--teal-dim); border: 1px solid var(--teal); }
+        
+        .bubble {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px 20px;
+            line-height: 1.65;
+            font-size: 0.95rem;
+            color: var(--ink);
+        }
+        .user-row .bubble {
+            background: #19253B;
+            border-color: #2F3E5C;
+        }
+        .sources-box {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--line);
+            font-size: 0.82rem;
+            color: var(--ink-dim);
+        }
+        .sources-title {
+            color: var(--teal);
+            font-weight: 600;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .source-tag {
+            background: var(--surface-hi);
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px 10px;
+            margin-top: 6px;
+            display: block;
+        }
+        
+        /* Suggested Chips */
+        .suggestions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .chip {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            color: var(--ink-dim);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .chip:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-dim); }
+
+        /* Input Container */
+        .input-bar-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 20px 28px;
+            background: linear-gradient(180deg, rgba(11,18,32,0) 0%, var(--canvas) 40%);
+            display: flex;
+            flex-direction: column;
+        }
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 4px 6px 4px 18px;
+            transition: 0.2s;
+        }
+        .input-wrapper:focus-within {
+            border-color: var(--teal);
+            box-shadow: 0 0 0 3px rgba(53,214,192,0.18);
+        }
+        #user-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--ink);
+            font-size: 0.95rem;
+            font-family: inherit;
+            outline: none;
+            padding: 10px 0;
+        }
+        #user-input::placeholder { color: var(--ink-mute); }
+        .input-actions { display: flex; gap: 6px; }
+        .action-btn {
+            background: transparent;
+            border: none;
+            color: var(--ink-dim);
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            transition: 0.2s;
+        }
+        .action-btn:hover { background: var(--surface-hi); color: var(--teal); }
+        .send-btn { background: var(--teal-dim); color: var(--teal); }
+        .send-btn:hover { background: #235e56; color: #7ff0e0; }
+        .listening { background: var(--amber-dim) !important; color: var(--amber) !important; animation: pulse 1s infinite; }
+    </style>
+</head>
+<body>
+    <aside>
+        <div class="brand">
+            <div class="brand-icon">🩺</div>
+            <div>
+                <div class="brand-title">CareBot</div>
+                <div class="brand-sub">Medical RAG System</div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">Query Mode</div>
+            <div class="card mode-select">
+                <label class="mode-option">
+                    <input type="radio" name="rag-mode" value="combined" checked>
+                    <span>🔀 Combined Knowledge</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="rag-mode" value="uploaded">
+                    <span>📄 Uploaded Docs Only</span>
+                </label>
+                <label class="mode-option">
+                    <input type="radio" name="rag-mode" value="base">
+                    <span>📚 Base Encyclopedia Only</span>
+                </label>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-title">Medical Document Upload</div>
+            <div class="upload-dropzone" onclick="document.getElementById('file-upload').click()">
+                <div style="font-size: 1.5rem;">📥</div>
+                <p>Click to upload <strong>PDF</strong> or <strong>TXT</strong></p>
+                <input type="file" id="file-upload" multiple accept=".pdf,.txt" style="display:none" onchange="handleFileUpload(this)">
+            </div>
+            <div id="upload-status" style="font-size: 0.78rem; color: var(--teal); margin-top: 8px;"></div>
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+            <button class="btn" onclick="exportChatHistory()">💾 Export Chat (JSON)</button>
+            <button class="btn btn-danger" onclick="clearChat()">🗑️ Clear Conversation</button>
+        </div>
+    </aside>
+
+    <main>
+        <header>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <h1 style="font-family: 'Source Serif 4', serif; font-size: 1.25rem;">CareBot Clinical Consultation</h1>
+            </div>
+            <div class="header-status">
+                <div class="status-dot"></div>
+                <span id="backend-status">RAG Connected (Vercel)</span>
+            </div>
+        </header>
+
+        <div id="chat-messages">
+            <!-- Welcome message -->
+            <div class="message-row bot-row">
+                <div class="avatar bot-avatar">🩺</div>
+                <div class="bubble">
+                    <strong>Hello! I am CareBot.</strong><br>
+                    I provide evidence-grounded answers based on clinical encyclopedias and your uploaded medical documents. How can I assist you today?
+                    <div class="suggestions" style="margin-top: 14px;">
+                        <div class="chip" onclick="askSuggestion(this.innerText)">What are common symptoms of Type 2 diabetes?</div>
+                        <div class="chip" onclick="askSuggestion(this.innerText)">Explain the diagnostic criteria for asthma</div>
+                        <div class="chip" onclick="askSuggestion(this.innerText)">What are standard protocols for hypertension?</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="input-bar-container">
+            <div class="input-wrapper">
+                <input type="text" id="user-input" placeholder="Ask a clinical or medical question..." onkeydown="if(event.key==='Enter') sendMessage()">
+                <div class="input-actions">
+                    <button class="action-btn" id="mic-btn" onclick="toggleSpeech()" title="Voice Input">🎙️</button>
+                    <button class="action-btn send-btn" onclick="sendMessage()" title="Send">➔</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let chatHistory = [];
+        let recognition = null;
+        let isListening = false;
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRec();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                document.getElementById('user-input').value = transcript;
+                stopSpeech();
+                sendMessage();
+            };
+            recognition.onerror = () => stopSpeech();
+            recognition.onend = () => stopSpeech();
+        }
+
+        function toggleSpeech() {
+            if (!recognition) {
+                alert("Speech recognition is not supported in this browser. Please use Chrome or Edge.");
+                return;
+            }
+            if (isListening) {
+                recognition.stop();
+                stopSpeech();
+            } else {
+                recognition.start();
+                isListening = true;
+                document.getElementById('mic-btn').classList.add('listening');
+            }
+        }
+
+        function stopSpeech() {
+            isListening = false;
+            document.getElementById('mic-btn').classList.remove('listening');
+        }
+
+        function askSuggestion(text) {
+            document.getElementById('user-input').value = text;
+            sendMessage();
+        }
+
+        async function handleFileUpload(input) {
+            if (!input.files.length) return;
+            const statusDiv = document.getElementById('upload-status');
+            statusDiv.innerText = "⏳ Processing documents...";
+            
+            const formData = new FormData();
+            for (let i = 0; i < input.files.length; i++) {
+                formData.append("files", input.files[i]);
+            }
+
+            try {
+                const res = await fetch('/api/upload', { method: 'POST', body: formData });
+                const data = await res.json();
+                statusDiv.innerText = `✅ Indexed ${data.total_uploaded_chunks} chunks`;
+            } catch (err) {
+                statusDiv.innerText = "❌ Upload failed";
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            input.value = "";
+            const mode = document.querySelector('input[name="rag-mode"]:checked').value;
+
+            appendMessage('user', text);
+            chatHistory.push({ role: 'user', content: text });
+
+            const typingId = appendTypingIndicator();
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query: text, mode: mode, history: chatHistory })
+                });
+
+                const data = await response.json();
+                removeTypingIndicator(typingId);
+
+                if (response.ok) {
+                    appendMessage('bot', data.answer, data.sources);
+                    chatHistory.push({ role: 'assistant', content: data.answer, sources: data.sources });
+                } else {
+                    appendMessage('bot', `⚠️ Error: ${data.detail || 'Failed to generate response'}`);
+                }
+            } catch (err) {
+                removeTypingIndicator(typingId);
+                appendMessage('bot', `⚠️ Network error: Could not reach backend RAG service.`);
+            }
+        }
+
+        function appendMessage(role, text, sources = []) {
+            const container = document.getElementById('chat-messages');
+            const row = document.createElement('div');
+            row.className = `message-row ${role}-row`;
+
+            const avatar = document.createElement('div');
+            avatar.className = `avatar ${role}-avatar`;
+            avatar.innerText = role === 'user' ? '👤' : '🩺';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.innerHTML = text.replace(/\\n/g, '<br>');
+
+            if (sources && sources.length > 0) {
+                const sourcesDiv = document.createElement('div');
+                sourcesDiv.className = 'sources-box';
+                sourcesDiv.innerHTML = `<div class="sources-title">📌 Source Citations:</div>` +
+                    sources.map(s => `<div class="source-tag"><strong>${s.source}</strong> (Page ${s.page})<br><em style="color:var(--ink-mute); font-size:0.75rem;">${s.snippet}</em></div>`).join('');
+                bubble.appendChild(sourcesDiv);
+            }
+
+            row.appendChild(avatar);
+            row.appendChild(bubble);
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function appendTypingIndicator() {
+            const container = document.getElementById('chat-messages');
+            const id = 'typing-' + Date.now();
+            const row = document.createElement('div');
+            row.id = id;
+            row.className = 'message-row bot-row';
+            row.innerHTML = `<div class="avatar bot-avatar">🩺</div><div class="bubble" style="color: var(--teal);">Thinking & retrieving clinical evidence...</div>`;
+            container.appendChild(row);
+            container.scrollTop = container.scrollHeight;
+            return id;
+        }
+
+        function removeTypingIndicator(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function clearChat() {
+            chatHistory = [];
+            document.getElementById('chat-messages').innerHTML = `
+                <div class="message-row bot-row">
+                    <div class="avatar bot-avatar">🩺</div>
+                    <div class="bubble">
+                        <strong>Conversation cleared.</strong><br>
+                        Ready for your next medical inquiry.
+                    </div>
+                </div>`;
+        }
+
+        function exportChatHistory() {
+            const blob = new Blob([JSON.stringify({ timestamp: new Date().toISOString(), messages: chatHistory }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `carebot-chat-${Date.now()}.json`;
+            a.click();
+        }
+    </script>
+</body>
+</html>
