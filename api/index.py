@@ -303,14 +303,21 @@ def chat_endpoint(req: ChatRequest):
         "timestamp": datetime.utcnow().isoformat()
     }
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 def index_page():
     html_paths = [
+        os.path.join(os.path.dirname(__file__), "index.html"),
         os.path.join(os.path.dirname(__file__), "..", "public", "index.html"),
+        os.path.join(os.path.dirname(__file__), "..", "index.html"),
         os.path.join("public", "index.html"),
+        os.path.join("api", "index.html"),
         "index.html",
     ]
     for path in html_paths:
         if os.path.exists(path):
-            return FileResponse(path)
-    return HTMLResponse("<h1>CareBot RAG API is running.</h1><p>Visit /api/health to check service status.</p>")
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    return HTMLResponse(content=f.read())
+            except Exception:
+                pass
+    return HTMLResponse(content="<h1>CareBot UI</h1><p>Could not load index.html template.</p>")
