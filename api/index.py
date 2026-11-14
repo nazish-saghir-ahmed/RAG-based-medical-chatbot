@@ -189,9 +189,23 @@ def retrieve_relevant_chunks(query: str, doc_pool: List[Dict[str, Any]], top_k: 
     scored.sort(key=lambda x: x[0], reverse=True)
     return [item[1] for item in scored[:top_k]]
 
+def get_api_key(name: str) -> Optional[str]:
+    # Check exact name, lower case, upper case, and common aliases
+    aliases = [name, name.upper(), name.lower()]
+    if "gemini" in name.lower():
+        aliases.extend(["GOOGLE_API_KEY", "GEMINI_KEY", "AI_API_KEY", "gemini_key", "google_api_key"])
+    if "groq" in name.lower():
+        aliases.extend(["GROQ_KEY", "groq_key"])
+
+    for alias in aliases:
+        val = os.getenv(alias)
+        if val and val.strip():
+            return val.strip()
+    return None
+
 def generate_llm_response(prompt: str, context: str) -> str:
-    gemini_key = os.getenv("GEMINI_API_KEY")
-    groq_key = os.getenv("GROQ_API_KEY")
+    gemini_key = get_api_key("GEMINI_API_KEY")
+    groq_key = get_api_key("GROQ_API_KEY")
 
     system_instruction = (
         "You are CareBot, an expert, empathetic, and evidence-based AI medical assistant. "
@@ -289,13 +303,18 @@ def startup_event():
 @app.get("/api/health")
 def health_check():
     load_base_knowledge()
+    gemini_key = get_api_key("GEMINI_API_KEY")
+    groq_key = get_api_key("GROQ_API_KEY")
+    # Safe preview: reveal first 4 characters and length to verify exact loaded key without exposing secrets
+    preview = f"{gemini_key[:4]}...({len(gemini_key)} chars)" if gemini_key else None
     return {
         "status": "online",
         "service": "CareBot RAG API",
         "uploaded_chunks": len(uploaded_docs_store),
         "base_chunks": len(base_docs_store),
-        "has_gemini_key": bool(os.getenv("GEMINI_API_KEY")),
-        "has_groq_key": bool(os.getenv("GROQ_API_KEY")),
+        "has_gemini_key": bool(gemini_key),
+        "gemini_key_preview": preview,
+        "has_groq_key": bool(groq_key),
     }
 
 @app.post("/api/upload")
