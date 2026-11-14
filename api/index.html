@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CareBot 🩺 — Medical RAG Assistant</title>
+    <title>CareBot — Medical RAG Assistant</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --canvas: #0B1220;
@@ -18,6 +18,8 @@
             --ink-mute: #7C8AA0;
             --teal: #35D6C0;
             --teal-dim: #1B4A44;
+            --blue: #38BDF8;
+            --blue-dim: #0C4A6E;
             --amber: #F0B429;
             --amber-dim: #4A3A15;
             --danger: #FF6B6B;
@@ -30,7 +32,20 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
+            position: relative;
         }
+
+        /* Flow Cursor Canvas */
+        #cursor-flow-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 99999;
+        }
+
         /* Sidebar */
         aside {
             width: 320px;
@@ -41,6 +56,8 @@
             padding: 24px;
             gap: 20px;
             overflow-y: auto;
+            position: relative;
+            z-index: 10;
         }
         .brand {
             display: flex;
@@ -50,22 +67,39 @@
             border-bottom: 1px solid var(--line);
         }
         .brand-icon {
-            font-size: 2rem;
-            background: var(--surface);
-            padding: 8px;
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(53, 214, 192, 0.15));
             border-radius: 12px;
-            border: 1px solid var(--line);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 0 16px rgba(56, 189, 248, 0.2);
+        }
+        .brand-icon svg {
+            width: 30px;
+            height: 30px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
         }
         .brand-title {
-            font-family: 'Source Serif 4', serif;
-            font-size: 1.3rem;
-            color: var(--ink);
-            font-weight: 600;
+            font-family: 'Caveat', cursive;
+            font-size: 2.1rem;
+            line-height: 1;
+            color: #EAF0F8;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            background: linear-gradient(120deg, #FFFFFF 20%, #7DD3FC 60%, #35D6C0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         .brand-sub {
             font-size: 0.78rem;
             color: var(--teal);
             font-weight: 500;
+            margin-top: 2px;
+            letter-spacing: 0.03em;
         }
         .section-title {
             font-size: 0.8rem;
@@ -99,18 +133,40 @@
         }
         .mode-option:hover { background: var(--surface-hi); color: var(--ink); }
         .mode-option input[type="radio"] { accent-color: var(--teal); }
+        .option-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .opt-icon {
+            display: inline-flex;
+            align-items: center;
+            color: var(--blue);
+            opacity: 0.9;
+        }
         
         .upload-dropzone {
             border: 1.5px dashed var(--line);
             border-radius: 10px;
-            padding: 16px;
+            padding: 18px 16px;
             text-align: center;
             background: var(--surface);
             cursor: pointer;
             transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
         .upload-dropzone:hover { border-color: var(--teal); background: var(--surface-hi); }
-        .upload-dropzone p { font-size: 0.82rem; color: var(--ink-dim); margin-top: 6px; }
+        .upload-dropzone .dropzone-icon {
+            color: var(--blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .upload-dropzone p { font-size: 0.82rem; color: var(--ink-dim); }
         
         .btn {
             background: var(--surface);
@@ -128,8 +184,14 @@
             transition: 0.2s;
             width: 100%;
         }
+        .btn svg {
+            color: var(--ink-dim);
+            transition: 0.2s;
+        }
         .btn:hover { background: var(--surface-hi); border-color: var(--teal); color: var(--teal); }
+        .btn:hover svg { color: var(--teal); }
         .btn-danger:hover { border-color: var(--danger); color: var(--danger); }
+        .btn-danger:hover svg { color: var(--danger); }
         
         /* Main Chat Area */
         main {
@@ -138,6 +200,7 @@
             flex-direction: column;
             height: 100vh;
             position: relative;
+            z-index: 10;
         }
         header {
             padding: 16px 28px;
@@ -147,6 +210,45 @@
             align-items: center;
             background: rgba(11, 18, 32, 0.85);
             backdrop-filter: blur(8px);
+        }
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .header-robot-symbol {
+            width: 32px;
+            height: 32px;
+            background: rgba(56, 189, 248, 0.12);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header-robot-symbol svg {
+            width: 22px;
+            height: 22px;
+        }
+        .header-title {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        .header-carebot {
+            font-family: 'Caveat', cursive;
+            font-size: 1.85rem;
+            line-height: 1;
+            font-weight: 700;
+            background: linear-gradient(120deg, #FFFFFF 20%, #7DD3FC 60%, #35D6C0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header-subtitle {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--ink);
         }
         .header-status {
             display: flex;
@@ -192,11 +294,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
             flex-shrink: 0;
         }
-        .user-avatar { background: var(--amber-dim); border: 1px solid var(--amber); }
-        .bot-avatar { background: var(--teal-dim); border: 1px solid var(--teal); }
+        .user-avatar { background: var(--amber-dim); border: 1px solid var(--amber); color: var(--amber); }
+        .bot-avatar {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(53, 214, 192, 0.15));
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            color: var(--blue);
+        }
+        .bot-avatar svg { width: 24px; height: 24px; }
+        .user-avatar svg { width: 20px; height: 20px; }
         
         .bubble {
             background: var(--surface);
@@ -301,9 +408,9 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.1rem;
             transition: 0.2s;
         }
+        .action-btn svg { width: 20px; height: 20px; }
         .action-btn:hover { background: var(--surface-hi); color: var(--teal); }
         .send-btn { background: var(--teal-dim); color: var(--teal); }
         .send-btn:hover { background: #235e56; color: #7ff0e0; }
@@ -311,9 +418,42 @@
     </style>
 </head>
 <body>
+    <!-- Flow Cursor Canvas -->
+    <canvas id="cursor-flow-canvas"></canvas>
+
     <aside>
         <div class="brand">
-            <div class="brand-icon">🩺</div>
+            <div class="brand-icon">
+                <!-- Cute Blue Doctor Robot SVG Icon -->
+                <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Antenna & Stethoscope Headband -->
+                    <circle cx="18" cy="4.5" r="2" fill="#38BDF8"/>
+                    <path d="M18 6.5V9.5" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/>
+                    <!-- Head -->
+                    <rect x="6.5" y="9.5" width="23" height="17" rx="6" fill="#1E293B" stroke="#38BDF8" stroke-width="1.8"/>
+                    <!-- Ears/Headset -->
+                    <rect x="4.5" y="14" width="2" height="7" rx="1" fill="#38BDF8"/>
+                    <rect x="29.5" y="14" width="2" height="7" rx="1" fill="#38BDF8"/>
+                    <!-- Doctor Medical Cross Cap/Badge -->
+                    <rect x="16.5" y="11" width="3" height="5" rx="0.5" fill="#35D6C0"/>
+                    <rect x="15.5" y="12" width="5" height="3" rx="0.5" fill="#35D6C0"/>
+                    <!-- Cute Glowing Eyes -->
+                    <circle cx="13" cy="18.5" r="2.2" fill="#38BDF8"/>
+                    <circle cx="13.7" cy="17.8" r="0.8" fill="#FFFFFF"/>
+                    <circle cx="23" cy="18.5" r="2.2" fill="#38BDF8"/>
+                    <circle cx="23.7" cy="17.8" r="0.8" fill="#FFFFFF"/>
+                    <!-- Rosy Robot Cheeks -->
+                    <circle cx="10" cy="21" r="1" fill="rgba(56, 189, 248, 0.4)"/>
+                    <circle cx="26" cy="21" r="1" fill="rgba(56, 189, 248, 0.4)"/>
+                    <!-- Smiling Screen Mouth -->
+                    <path d="M15.5 22.5C16.3 23.6 19.7 23.6 20.5 22.5" stroke="#35D6C0" stroke-width="1.6" stroke-linecap="round"/>
+                    <!-- Neck/Collar -->
+                    <path d="M14 26.5L13 32H23L22 26.5" stroke="#38BDF8" stroke-width="1.4" fill="#0F172A"/>
+                    <!-- Miniature Stethoscope over chest -->
+                    <path d="M15 28C15 30.5 21 30.5 21 28" stroke="#35D6C0" stroke-width="1.4" fill="none"/>
+                    <circle cx="18" cy="31" r="1.2" fill="#38BDF8"/>
+                </svg>
+            </div>
             <div>
                 <div class="brand-title">CareBot</div>
                 <div class="brand-sub">Medical RAG System</div>
@@ -325,15 +465,30 @@
             <div class="card mode-select">
                 <label class="mode-option">
                     <input type="radio" name="rag-mode" value="combined" checked>
-                    <span>🔀 Combined Knowledge</span>
+                    <span class="option-label">
+                        <span class="opt-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20L21 3"/><path d="M21 16v5h-5"/><path d="M15 15l6 6"/><path d="M4 4l5 5"/></svg>
+                        </span>
+                        Combined Knowledge
+                    </span>
                 </label>
                 <label class="mode-option">
                     <input type="radio" name="rag-mode" value="uploaded">
-                    <span>📄 Uploaded Docs Only</span>
+                    <span class="option-label">
+                        <span class="opt-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                        </span>
+                        Uploaded Docs Only
+                    </span>
                 </label>
                 <label class="mode-option">
                     <input type="radio" name="rag-mode" value="base">
-                    <span>📚 Base Encyclopedia Only</span>
+                    <span class="option-label">
+                        <span class="opt-icon">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        </span>
+                        Base Encyclopedia Only
+                    </span>
                 </label>
             </div>
         </div>
@@ -341,7 +496,9 @@
         <div>
             <div class="section-title">Medical Document Upload</div>
             <div class="upload-dropzone" onclick="document.getElementById('file-upload').click()">
-                <div style="font-size: 1.5rem;">📥</div>
+                <div class="dropzone-icon">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                </div>
                 <p>Click to upload <strong>PDF</strong> or <strong>TXT</strong></p>
                 <input type="file" id="file-upload" multiple accept=".pdf,.txt" style="display:none" onchange="handleFileUpload(this)">
             </div>
@@ -349,15 +506,41 @@
         </div>
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
-            <button class="btn" onclick="exportChatHistory()">💾 Export Chat (JSON)</button>
-            <button class="btn btn-danger" onclick="clearChat()">🗑️ Clear Conversation</button>
+            <button class="btn" onclick="exportChatHistory()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                Export Chat (JSON)
+            </button>
+            <button class="btn btn-danger" onclick="clearChat()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                Clear Conversation
+            </button>
         </div>
     </aside>
 
     <main>
         <header>
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <h1 style="font-family: 'Source Serif 4', serif; font-size: 1.25rem;">CareBot Clinical Consultation</h1>
+            <div class="header-brand">
+                <div class="header-robot-symbol">
+                    <!-- Cute Blue Doctor Robot Icon in Header -->
+                    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="18" cy="4.5" r="2" fill="#38BDF8"/>
+                        <path d="M18 6.5V9.5" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/>
+                        <rect x="6.5" y="9.5" width="23" height="17" rx="6" fill="#1E293B" stroke="#38BDF8" stroke-width="1.8"/>
+                        <rect x="4.5" y="14" width="2" height="7" rx="1" fill="#38BDF8"/>
+                        <rect x="29.5" y="14" width="2" height="7" rx="1" fill="#38BDF8"/>
+                        <rect x="16.5" y="11" width="3" height="5" rx="0.5" fill="#35D6C0"/>
+                        <rect x="15.5" y="12" width="5" height="3" rx="0.5" fill="#35D6C0"/>
+                        <circle cx="13" cy="18.5" r="2.2" fill="#38BDF8"/>
+                        <circle cx="13.7" cy="17.8" r="0.8" fill="#FFFFFF"/>
+                        <circle cx="23" cy="18.5" r="2.2" fill="#38BDF8"/>
+                        <circle cx="23.7" cy="17.8" r="0.8" fill="#FFFFFF"/>
+                        <path d="M15.5 22.5C16.3 23.6 19.7 23.6 20.5 22.5" stroke="#35D6C0" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <div class="header-title">
+                    <span class="header-carebot">CareBot</span>
+                    <span class="header-subtitle">Clinical Consultation</span>
+                </div>
             </div>
             <div class="header-status">
                 <div class="status-dot"></div>
@@ -368,7 +551,18 @@
         <div id="chat-messages">
             <!-- Welcome message -->
             <div class="message-row bot-row">
-                <div class="avatar bot-avatar">🩺</div>
+                <div class="avatar bot-avatar">
+                    <svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="18" cy="4.5" r="2" fill="#38BDF8"/>
+                        <path d="M18 6.5V9.5" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/>
+                        <rect x="6.5" y="9.5" width="23" height="17" rx="6" fill="#1E293B" stroke="#38BDF8" stroke-width="1.8"/>
+                        <rect x="16.5" y="11" width="3" height="5" rx="0.5" fill="#35D6C0"/>
+                        <rect x="15.5" y="12" width="5" height="3" rx="0.5" fill="#35D6C0"/>
+                        <circle cx="13" cy="18.5" r="2.2" fill="#38BDF8"/>
+                        <circle cx="23" cy="18.5" r="2.2" fill="#38BDF8"/>
+                        <path d="M15.5 22.5C16.3 23.6 19.7 23.6 20.5 22.5" stroke="#35D6C0" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                </div>
                 <div class="bubble">
                     <strong>Hello! I am CareBot.</strong><br>
                     I provide evidence-grounded answers based on clinical encyclopedias and your uploaded medical documents. How can I assist you today?
@@ -385,17 +579,210 @@
             <div class="input-wrapper">
                 <input type="text" id="user-input" placeholder="Ask a clinical or medical question..." onkeydown="if(event.key==='Enter') sendMessage()">
                 <div class="input-actions">
-                    <button class="action-btn" id="mic-btn" onclick="toggleSpeech()" title="Voice Input">🎙️</button>
-                    <button class="action-btn send-btn" onclick="sendMessage()" title="Send">➔</button>
+                    <button class="action-btn" id="mic-btn" onclick="toggleSpeech()" title="Voice Input">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                    </button>
+                    <button class="action-btn send-btn" onclick="sendMessage()" title="Send">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
     </main>
 
     <script>
+        // --- High-Performance Fluid Cursor Flow ---
+        (function initCursorFlow() {
+            if (typeof window === 'undefined') return;
+            const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+            if (prefersReducedMotion || isTouchDevice) return;
+
+            const canvas = document.getElementById('cursor-flow-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+
+            let animId;
+            let width = (canvas.width = window.innerWidth);
+            let height = (canvas.height = window.innerHeight);
+
+            window.addEventListener('resize', () => {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            });
+
+            const trail = [];
+            const maxTrail = 22;
+            const particles = [];
+            const maxParticles = 45;
+
+            let mouse = { x: -200, y: -200, prevX: -200, prevY: -200, vx: 0, vy: 0 };
+            let isMoving = false;
+            let idleTimer = null;
+
+            window.addEventListener('mousemove', (e) => {
+                const currentX = e.clientX;
+                const currentY = e.clientY;
+
+                const vx = currentX - (mouse.x === -200 ? currentX : mouse.x);
+                const vy = currentY - (mouse.y === -200 ? currentY : mouse.y);
+                const speed = Math.hypot(vx, vy);
+
+                mouse.prevX = mouse.x;
+                mouse.prevY = mouse.y;
+                mouse.x = currentX;
+                mouse.y = currentY;
+                mouse.vx = vx;
+                mouse.vy = vy;
+
+                isMoving = true;
+                clearTimeout(idleTimer);
+                idleTimer = setTimeout(() => {
+                    isMoving = false;
+                }, 120);
+
+                trail.unshift({
+                    x: currentX,
+                    y: currentY,
+                    age: 1,
+                    width: Math.min(10, 3 + speed * 0.18),
+                });
+                if (trail.length > maxTrail) {
+                    trail.pop();
+                }
+
+                if (speed > 1.5 && particles.length < maxParticles) {
+                    const count = Math.min(3, Math.ceil(speed / 6));
+                    for (let i = 0; i < count; i++) {
+                        const angle = Math.atan2(vy, vx) + (Math.random() - 0.5) * 1.2;
+                        const particleSpeed = (Math.random() * 1.5 + 0.5) * (speed * 0.1);
+                        const isWhiteSpark = Math.random() > 0.6;
+
+                        particles.push({
+                            x: currentX + (Math.random() - 0.5) * 6,
+                            y: currentY + (Math.random() - 0.5) * 6,
+                            vx: -Math.cos(angle) * particleSpeed * 0.3 + (Math.random() - 0.5) * 0.6,
+                            vy: -Math.sin(angle) * particleSpeed * 0.3 + (Math.random() - 0.5) * 0.6,
+                            size: isWhiteSpark ? Math.random() * 2.5 + 1.2 : Math.random() * 3.5 + 1.8,
+                            alpha: 0.9,
+                            decay: Math.random() * 0.035 + 0.02,
+                            isWhite: isWhiteSpark,
+                        });
+                    }
+                }
+            }, { passive: true });
+
+            document.addEventListener('mouseleave', () => {
+                isMoving = false;
+                trail.length = 0;
+            });
+
+            function render() {
+                ctx.clearRect(0, 0, width, height);
+
+                // Ribbon trail
+                if (trail.length > 2) {
+                    for (let i = 0; i < trail.length - 1; i++) {
+                        const p1 = trail[i];
+                        const p2 = trail[i + 1];
+
+                        p1.age *= 0.88;
+
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+
+                        const alpha = p1.age * 0.45;
+                        ctx.strokeStyle = i % 2 === 0
+                            ? `rgba(56, 189, 248, ${alpha})`
+                            : `rgba(255, 255, 255, ${alpha * 0.85})`;
+                        ctx.lineWidth = Math.max(0.5, p1.width * p1.age);
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.shadowColor = '#0284C7';
+                        ctx.shadowBlur = 12;
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+
+                    if (!isMoving && trail.length > 0) {
+                        trail.pop();
+                    }
+                }
+
+                // Droplets & particles
+                for (let i = particles.length - 1; i >= 0; i--) {
+                    const p = particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.96;
+                    p.vy *= 0.96;
+                    p.alpha -= p.decay;
+
+                    if (p.alpha <= 0) {
+                        particles.splice(i, 1);
+                        continue;
+                    }
+
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size * p.alpha, 0, Math.PI * 2);
+
+                    if (p.isWhite) {
+                        ctx.fillStyle = `rgba(255, 255, 255, ${p.alpha})`;
+                        ctx.shadowColor = '#FFFFFF';
+                        ctx.shadowBlur = 10;
+                    } else {
+                        ctx.fillStyle = `rgba(56, 189, 248, ${p.alpha * 0.9})`;
+                        ctx.shadowColor = '#0284C7';
+                        ctx.shadowBlur = 12;
+                    }
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                // Glowing pointer head
+                if (isMoving && mouse.x > 0 && mouse.y > 0) {
+                    ctx.save();
+                    const grad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 14);
+                    grad.addColorStop(0, 'rgba(255, 255, 255, 0.75)');
+                    grad.addColorStop(0.35, 'rgba(56, 189, 248, 0.45)');
+                    grad.addColorStop(1, 'rgba(53, 214, 192, 0)');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(mouse.x, mouse.y, 14, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                animId = requestAnimationFrame(render);
+            }
+
+            render();
+        })();
+
+        // --- Application Logic ---
         let chatHistory = [];
         let recognition = null;
         let isListening = false;
+
+        const ROBOT_ICON_SVG = `<svg viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="18" cy="4.5" r="2" fill="#38BDF8"/>
+            <path d="M18 6.5V9.5" stroke="#38BDF8" stroke-width="1.8" stroke-linecap="round"/>
+            <rect x="6.5" y="9.5" width="23" height="17" rx="6" fill="#1E293B" stroke="#38BDF8" stroke-width="1.8"/>
+            <rect x="16.5" y="11" width="3" height="5" rx="0.5" fill="#35D6C0"/>
+            <rect x="15.5" y="12" width="5" height="3" rx="0.5" fill="#35D6C0"/>
+            <circle cx="13" cy="18.5" r="2.2" fill="#38BDF8"/>
+            <circle cx="23" cy="18.5" r="2.2" fill="#38BDF8"/>
+            <path d="M15.5 22.5C16.3 23.6 19.7 23.6 20.5 22.5" stroke="#35D6C0" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>`;
+
+        const USER_ICON_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+        </svg>`;
 
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -442,7 +829,10 @@
         async function handleFileUpload(input) {
             if (!input.files.length) return;
             const statusDiv = document.getElementById('upload-status');
-            statusDiv.innerText = "⏳ Processing documents...";
+            statusDiv.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1.5s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Processing documents...
+            </span>`;
             
             const formData = new FormData();
             for (let i = 0; i < input.files.length; i++) {
@@ -452,9 +842,15 @@
             try {
                 const res = await fetch('/api/upload', { method: 'POST', body: formData });
                 const data = await res.json();
-                statusDiv.innerText = `✅ Indexed ${data.total_uploaded_chunks} chunks`;
+                statusDiv.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px; color:var(--teal);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    Indexed ${data.total_uploaded_chunks} chunks
+                </span>`;
             } catch (err) {
-                statusDiv.innerText = "❌ Upload failed";
+                statusDiv.innerHTML = `<span style="display:inline-flex; align-items:center; gap:6px; color:var(--danger);">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    Upload failed
+                </span>`;
             }
         }
 
@@ -485,11 +881,11 @@
                     appendMessage('bot', data.answer, data.sources);
                     chatHistory.push({ role: 'assistant', content: data.answer, sources: data.sources });
                 } else {
-                    appendMessage('bot', `⚠️ Error: ${data.detail || 'Failed to generate response'}`);
+                    appendMessage('bot', `<span style="display:inline-flex; align-items:center; gap:6px; color:var(--danger);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Error: ${data.detail || 'Failed to generate response'}</span>`);
                 }
             } catch (err) {
                 removeTypingIndicator(typingId);
-                appendMessage('bot', `⚠️ Network error: Could not reach backend RAG service.`);
+                appendMessage('bot', `<span style="display:inline-flex; align-items:center; gap:6px; color:var(--danger);"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Network error: Could not reach backend RAG service.</span>`);
             }
         }
 
@@ -500,16 +896,16 @@
 
             const avatar = document.createElement('div');
             avatar.className = `avatar ${role}-avatar`;
-            avatar.innerText = role === 'user' ? '👤' : '🩺';
+            avatar.innerHTML = role === 'user' ? USER_ICON_SVG : ROBOT_ICON_SVG;
 
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
-            bubble.innerHTML = text.replace(/\\n/g, '<br>');
+            bubble.innerHTML = text.replace(/\n/g, '<br>');
 
             if (sources && sources.length > 0) {
                 const sourcesDiv = document.createElement('div');
                 sourcesDiv.className = 'sources-box';
-                sourcesDiv.innerHTML = `<div class="sources-title">📌 Source Citations:</div>` +
+                sourcesDiv.innerHTML = `<div class="sources-title"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"/></svg> Source Citations:</div>` +
                     sources.map(s => `<div class="source-tag"><strong>${s.source}</strong> (Page ${s.page})<br><em style="color:var(--ink-mute); font-size:0.75rem;">${s.snippet}</em></div>`).join('');
                 bubble.appendChild(sourcesDiv);
             }
@@ -526,7 +922,10 @@
             const row = document.createElement('div');
             row.id = id;
             row.className = 'message-row bot-row';
-            row.innerHTML = `<div class="avatar bot-avatar">🩺</div><div class="bubble" style="color: var(--teal);">Thinking & retrieving clinical evidence...</div>`;
+            row.innerHTML = `<div class="avatar bot-avatar">${ROBOT_ICON_SVG}</div><div class="bubble" style="color: var(--teal); display:flex; align-items:center; gap:8px;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="animation:spin 1.5s linear infinite;"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Thinking & retrieving clinical evidence...
+            </div>`;
             container.appendChild(row);
             container.scrollTop = container.scrollHeight;
             return id;
@@ -541,7 +940,7 @@
             chatHistory = [];
             document.getElementById('chat-messages').innerHTML = `
                 <div class="message-row bot-row">
-                    <div class="avatar bot-avatar">🩺</div>
+                    <div class="avatar bot-avatar">${ROBOT_ICON_SVG}</div>
                     <div class="bubble">
                         <strong>Conversation cleared.</strong><br>
                         Ready for your next medical inquiry.
