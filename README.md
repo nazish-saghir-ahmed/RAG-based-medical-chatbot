@@ -1,138 +1,137 @@
-# CareBot 🩺 - Medical RAG AI Assistant
+<div align="center">
 
-CareBot is an intelligent, Retrieval-Augmented Generation (RAG) powered conversational medical assistant built with **Streamlit**, **LangChain**, **HuggingFace Embeddings**, and **Google Gemini / Groq / OpenAI LLMs**.
+# 🩺 CareBot — Clinical RAG Assistant
 
-CareBot retrieves accurate, context-grounded information from clinical medical texts and encyclopedias, strictly preventing hallucinated responses and citing every source document and page number.
+**Evidence-Grounded Medical Decision-Support System powered by FastAPI, BM25 Probabilistic Retrieval, and Google Gemini 2.5.**
 
----
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
+[![LLM](https://img.shields.io/badge/LLM-Gemini%202.5%20Flash-4285F4.svg)](https://ai.google.dev/)
+[![Deployment](https://img.shields.io/badge/Deployed-Vercel-black.svg)](https://vercel.com/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 🌟 Key Features
-
-- 📚 **Dual-Source Retrieval-Augmented Generation (RAG)**:
-  - **Base Knowledge Base**: Pre-embedded medical encyclopedia (`ChromaDB` / `FAISS`).
-  - **Dynamic Document Upload**: On-the-fly embedding and querying of custom PDF and TXT medical documents.
-- 🔀 **Flexible Query Modes**:
-  - *Combined Mode* (default): Retrieves context from both uploaded documents and the core medical knowledge base.
-  - *Uploaded Documents Only*: Focuses strictly on the user's uploaded files.
-  - *Base Knowledge Only*: Queries standard medical references.
-- 💬 **Session Chat Management**:
-  - Full conversation history with clean dark-mode UI.
-  - Instant chat export / download as JSON with timestamps and citations.
-  - One-click conversation reset.
-- 🎯 **Strict Context-Aware Answers**: Prompt templates enforce factual generation strictly grounded in retrieved passages with source citations.
-- 🎙️ **Voice Recognition Ready**: Built-in support for speech recognition input.
+</div>
 
 ---
 
-## 🏗️ Architecture
+## 📌 Overview
 
-```
-User Query / Document Upload
-            │
-    ┌───────┴────────────────────────┐
-    ▼                                ▼
-[Uploaded PDF/TXT]          [Base Knowledge Base]
-(Dynamic Embeddings)           (Pre-computed ChromaDB)
-    │                                │
-    └───────┬────────────────────────┘
-            ▼
-   [Sentence-Transformers] (all-MiniLM-L6-v2)
-            ▼
-    [Vector Retriever] (Cosine Similarity, Top-k)
-            ▼
-    [Prompt Template + Context]
-            ▼
-     [LLM Generation] (Gemini / Groq / OpenAI)
-            ▼
-  Answer + Source Citations
-```
+**CareBot** is a production-grade, evidence-grounded Retrieval-Augmented Generation (RAG) assistant designed for medical inquiry, clinical question-answering, and patient document review. 
+
+To eliminate clinical hallucination risks, CareBot strictly grounds its responses on verified medical literature and user-uploaded clinical documentation, providing transparent citations with exact source names and page numbers for every answer.
 
 ---
 
-## 📂 Project Structure
+## ✨ Key Features
+
+- **Evidence-Grounded RAG Engine**: Utilizes probabilistic **BM25 / TF-IDF** scoring with document length normalization and stop-word filtering over 2,200+ indexed clinical sections.
+- **Dual-Tier Knowledge Grounding**:
+  - **Base Encyclopedia**: 759 pages from the *Gale Encyclopedia of Medicine*, pre-indexed into a fast gzipped cache for sub-second retrieval without cold starts.
+  - **Dynamic Patient Document Ingestion**: Ingest and index arbitrary clinical records (PDF/TXT) on the fly.
+- **Three Query Modes**:
+  1. 🔀 **Combined Knowledge**: Synthesizes evidence across both base reference literature and uploaded clinical records.
+  2. 📄 **Uploaded Docs Only**: Restricts retrieval strictly to user-uploaded consultation notes or lab reports.
+  3. 📚 **Base Encyclopedia Only**: Queries validated reference encyclopedias exclusively.
+- **Frontier LLM Integration**: Powered by Google's `gemini-2.5-flash` with automatic failover to `gemini-flash-latest` and Groq (`llama-3.3-70b-versatile`).
+- **Hands-Free Clinical Voice Dictation**: Integrated Web Speech API for voice queries.
+- **Interactive Fluid Motion UX**: Sleek clinical dark-theme with 60 FPS fluid-motion particle cursor flow engine.
+- **Exportable Records**: One-click JSON export of clinical consultation histories.
+
+---
+
+## 🏗️ Architecture & Project Structure
+
+The project has been cleaned and organized into a clean production architecture:
 
 ```
-PROJECT_RAG/
+RAG-based-medical-chatbot/
 ├── api/
-│   └── index.py                        # Vercel Serverless ASGI / FastAPI entrypoint & RAG engine
+│   ├── index.py          # FastAPI application & complete RAG engine
+│   └── index.html        # Interactive clinical web consultation UI
+├── data/
+│   └── gale_knowledge.json.gz  # Fast pre-extracted 759-page clinical knowledge base
 ├── public/
-│   └── index.html                      # Interactive Clinical CareBot Web UI
-├── vercel.json                         # Vercel deployment & route routing configuration
-├── app.py                              # Local & Universal ASGI entrypoint
-├── data/                               # Reference medical source documents
-│   └── The_GALE_ENCYCLOPEDIA_of_MEDICINE_SECOND.pdf
-├── streamlit_app.py                    # Streamlit desktop/local application
-├── streamlit_app_explain.py            # Annotated version with step-by-step documentation
-├── connectmemorywithllm.py             # Backend RAG retrieval chain & CLI tester
-├── Creatememoryforllm.py               # Vectorstore index generation script (FAISS)
-├── carebot.py                          # Groq-based prototype implementation
-├── CHATBOT_FEATURES.md                 # Detailed feature specifications
-├── concepts.md                         # Comprehensive RAG concepts & architectural guide
-├── requirements.txt                    # Production serverless dependencies
-├── .env.example                        # Environment variables template
-└── .gitignore                          # Git ignore rules for virtualenvs, caches & keys
+│   └── index.html        # Public frontend assets
+├── .env.example          # Template for environment variables
+├── .gitignore            # Clean git configuration
+├── app.py                # Local development entrypoint
+├── index.html            # Root frontend template
+├── requirements.txt      # Minimal production Python dependencies
+├── vercel.json           # Vercel serverless deployment config
+└── README.md             # Project documentation
 ```
 
 ---
 
-## 🚀 Getting Started
+## 🚀 Quick Start (Local Development)
 
-### 1. Clone the Repository
+### 1. Clone the repository
 ```bash
-git clone <YOUR_GITHUB_REPO_URL>
-cd PROJECT_RAG
+git clone https://github.com/nazish-saghir-ahmed/RAG-based-medical-chatbot.git
+cd RAG-based-medical-chatbot
 ```
 
-### 2. Create and Activate a Virtual Environment
+### 2. Create and activate a virtual environment
 ```bash
-# Windows
 python -m venv .venv
-.venv\Scripts\activate
-
-# macOS / Linux
-python3 -m venv .venv
+# On Windows:
+.\.venv\Scripts\activate
+# On macOS/Linux:
 source .venv/bin/activate
 ```
 
-### 3. Install Dependencies
+### 3. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment Variables
-Copy `.env.example` to `.env` and configure your API keys:
+### 4. Configure environment variables
+Copy `.env.example` to `.env`:
 ```bash
 cp .env.example .env
 ```
-
-Edit `.env` and supply:
+Add your **Google Gemini API Key** from [Google AI Studio](https://aistudio.google.com/):
 ```env
-GEMINI_API_KEY="your_google_gemini_api_key_here"
-# Optional alternatives:
-GROQ_API_KEY="your_groq_api_key_here"
-LONGCAT_API_KEY="your_longcat_api_key_here"
-HF_TOKEN="your_huggingface_token_if_needed"
+GEMINI_API_KEY="AIzaSy..."
 ```
 
-### 5. Run the Application
-Launch the Streamlit web application:
+### 5. Launch the application
 ```bash
-streamlit run streamlit_app.py
+python app.py
 ```
-
-Or test the RAG chain in CLI mode:
-```bash
-python connectmemorywithllm.py
+Open your browser and navigate to:
+```
+http://localhost:8000
 ```
 
 ---
 
-## 🛡️ Privacy & Safety Disclaimer
+## ☁️ Deployment on Vercel
 
-CareBot is an AI assistant designed for educational and informational reference only. It should not replace professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare provider for clinical decisions.
+CareBot is configured for zero-configuration serverless deployment on Vercel:
+
+1. Import your GitHub repository into [Vercel](https://vercel.com/).
+2. Navigate to **Project Settings** $\rightarrow$ **Environment Variables**.
+3. Add:
+   * **Key**: `GEMINI_API_KEY`
+   * **Value**: Your Google Gemini API key
+   * **Target Environments**: Production, Preview, Development
+4. Deploy! Vercel handles serverless routing through `vercel.json` and `api/index.py`.
 
 ---
 
-## 📄 License
+## 🧪 API Endpoints
 
-This project is open source and available under the [MIT License](LICENSE).
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/` | Serves the interactive CareBot consultation UI |
+| `GET` | `/api/health` | Health-check endpoint reporting chunk index counts & key status |
+| `POST` | `/api/chat` | Main RAG inquiry endpoint (accepts query, mode, history) |
+| `POST` | `/api/upload` | Multipart endpoint for parsing & indexing patient PDFs/TXTs |
+| `POST` | `/api/clear_uploads` | Clears all session-uploaded patient records |
+
+---
+
+## 🛡️ Medical Disclaimer
+
+*CareBot is an educational and clinical demonstration tool. It provides evidence-grounded information based on provided reference material and is not a substitute for professional medical judgment, diagnosis, or treatment.*
